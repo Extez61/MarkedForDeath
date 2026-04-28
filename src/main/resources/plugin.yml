@@ -1,0 +1,27 @@
+name: MarkedForDeath
+version: ${project.version}
+main: com.extez0612.markedfordeath.MarkedForDeath
+api-version: 1.15
+authors: [ extez061 ]
+description: MarkedForDeath with Imposter Minigame
+website: https://modrinth.com/user/Extez0612
+
+commands:
+  markedfordeath:
+    description: MarkedForDeath main command
+    aliases: [ mfd ]
+    usage: /mfd <start|stop|help|selectrunner>
+  kitedit:
+    description: Kit editor command (text-based)
+    usage: /kitedit <runner|guardians|imposter|leave>
+  kiteditgui:
+    description: Kit editor GUI
+    usage: /kiteditgui
+
+permissions:
+  markedfordeath.admin:
+    description: Admin permission for MarkedForDeath
+    default: op
+  markedfordeath.kitedit:
+    description: Permission to edit kits
+    default: op

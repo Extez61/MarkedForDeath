@@ -1,0 +1,359 @@
+# ============================================================
+#   MarkedForDeath with Imposter
+#   Made by ~extez061
+#   https://modrinth.com/user/Extez0612
+# ============================================================
+
+# Language for in-game messages.
+# Supported values: en (English), tr (Turkish)
+language: en
+
+game:
+  # Total game duration in seconds after the runner touches a player.
+  # Default: 600 (10 minutes)
+  duration: 600
+
+  # Minimum number of online players required to start the game.
+  # Setting to 2 will start games without an Imposter (Runner vs 1 Guardian only).
+  min-players: 3
+
+  # Controls who can see the task name in the action bar.
+  #   runner_only         → Only the Runner sees the task; others see a countdown timer.
+  #   runner_and_imposter → Runner and Imposter both see the task; guardians see timer.
+  #   everyone            → All players see the task and the countdown timer.
+  task-visibility: runner_only
+
+  # If false (default): the Imposter's identity is secret.
+  #   Only the Imposter is told who they are (via a title screen).
+  # If true: the Runner also receives a chat message at game start
+  #   revealing the name of the Imposter — their secret ally.
+  show-imposter-to-runner-in-chat: false
+
+  # Distance in blocks used during the waiting-for-touch phase.
+  # If no guardian/imposter is within this range of the runner, a
+  # reminder broadcast is sent every 15 seconds to prompt the runner to find someone.
+  runner-max-distance: 15
+
+  # If true (default), all players in the game may drop items freely.
+  # If false, dropping items is blocked for every game participant.
+  allow-item-drop: true
+
+  # Controls the keepInventory gamerule while a game is running.
+  # true  (default) → Players keep their items on death during the game.
+  # false           → Players lose their items on death (vanilla behaviour).
+  # The original gamerule value is restored automatically when the game ends.
+  keep-inventory: true
+
+# ── Task toggles ───────────────────────────────────────────────────────────
+# Each task below can be enabled (true) or disabled (false).
+# Disabled tasks will never be randomly selected at game start.
+tasks:
+  lava-death: true
+  drowning: true
+  magma-block: true
+  creeper: true
+  suffocation: true
+  skeleton: true
+  zombie: true
+  spider: true
+  iron-golem: true
+  fall-damage: true
+  cactus: true
+  berry-bush: true
+  anvil: false
+  lightning: false
+  wither-effect: false
+
+# ── Kit definitions ────────────────────────────────────────────────────────
+# Items are stored by inventory slot index (0-35).
+# Use /kitedit <runner|guardians|imposter> or /kiteditgui to edit kits in-game.
+kits:
+  runner:
+    items:
+      '8':
+        material: COOKED_BEEF
+        amount: 64
+
+  guardian:
+    items:
+      '0':
+        material: FISHING_ROD
+        amount: 1
+        unbreakable: true
+      '1':
+        material: ENDER_PEARL
+        amount: 16
+      '2':
+        material: COBWEB
+        amount: 64
+      '3':
+        material: SLIME_BLOCK
+        amount: 64
+      '4':
+        material: HONEY_BLOCK
+        amount: 64
+      '5':
+        material: SPONGE
+        amount: 64
+      '6':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: SLOW_FALLING
+        extended: false
+        upgraded: false
+      '7':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '8':
+        material: COOKED_BEEF
+        amount: 64
+      '12':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '13':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '14':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '15':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '16':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '17':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '21':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '22':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '23':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '24':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '25':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '26':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '28':
+        material: ENDER_PEARL
+        amount: 16
+      '29':
+        material: COBWEB
+        amount: 64
+      '30':
+        material: SLIME_BLOCK
+        amount: 64
+      '31':
+        material: HONEY_BLOCK
+        amount: 64
+      '32':
+        material: SPONGE
+        amount: 64
+      '33':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: SLOW_FALLING
+        extended: false
+        upgraded: false
+      '34':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '35':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+
+  imposter:
+    items:
+      '0':
+        material: FISHING_ROD
+        amount: 1
+        unbreakable: true
+      '1':
+        material: ENDER_PEARL
+        amount: 16
+      '2':
+        material: COBWEB
+        amount: 64
+      '3':
+        material: SLIME_BLOCK
+        amount: 64
+      '4':
+        material: HONEY_BLOCK
+        amount: 64
+      '5':
+        material: SPONGE
+        amount: 64
+      '6':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: SLOW_FALLING
+        extended: false
+        upgraded: false
+      '7':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: INVISIBILITY
+        extended: false
+        upgraded: false
+      '8':
+        material: COOKED_BEEF
+        amount: 64
+      '12':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '13':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '14':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '15':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '16':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '17':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '21':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '22':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '23':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '24':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '25':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '26':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
+      '28':
+        material: ENDER_PEARL
+        amount: 16
+      '29':
+        material: COBWEB
+        amount: 64
+      '30':
+        material: SLIME_BLOCK
+        amount: 64
+      '31':
+        material: HONEY_BLOCK
+        amount: 64
+      '32':
+        material: SPONGE
+        amount: 64
+      '33':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: SLOW_FALLING
+        extended: false
+        upgraded: false
+      '34':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: INVISIBILITY
+        extended: false
+        upgraded: false
+      '35':
+        material: SPLASH_POTION
+        amount: 1
+        potion-type: HEALING
+        extended: false
+        upgraded: false
