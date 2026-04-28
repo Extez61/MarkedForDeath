@@ -26,15 +26,16 @@ A fast-paced Minecraft minigame where a **Runner** must complete a deadly task w
 3. Runner punches a player to start the countdown
 4. Runner tries to die in the specific way shown on their action bar
 5. Guardians (and secretly the Imposter) react accordingly
-6. Game ends when: Runner completes the task / Runner dies the wrong way / Time runs out
+6. Game ends when: Runner completes the task / Runner dies the wrong way / 
+   A Guardian kills the Runner / Time runs out
 ```
 
 ### Winning Conditions
-
 | Condition | Winner |
 |-----------|--------|
 | Runner dies the correct way | ✅ Runner + Imposter |
-| Runner dies the wrong way OR a Guardian kills the Runner | ✅ Guardians |
+| A Guardian kills the Runner | ✅ Runner + Imposter |
+| Runner dies the wrong way | ✅ Guardians |
 | Timer runs out | ✅ Guardians |
 
 ---
