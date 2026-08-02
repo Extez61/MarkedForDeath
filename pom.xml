@@ -7,14 +7,21 @@
 
     <groupId>com.extez0612</groupId>
     <artifactId>MarkedForDeath</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
     <packaging>jar</packaging>
 
     <properties>
-        <java.version>1.8</java.version>
+        <!--
+          Minecraft/Spigot moved to year.drop versioning in 2026 (26.1 "Tiny
+          Takeover", 26.2 "Chaos Cubed", ...). 26.1/26.2 both run on Java 25,
+          but the plugin bytecode itself does not need to target 25 to run on
+          that JVM - 21 is a safe modern baseline that still compiles cleanly
+          against the current spigot-api artifact below.
+        -->
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
     </properties>
 
     <repositories>
@@ -25,10 +32,17 @@
     </repositories>
 
     <dependencies>
+        <!--
+          Targets Spigot 26.2 ("Chaos Cubed"). Spigot confirmed no breaking
+          API changes for 26.1 vs 1.21.11, and 26.2 was a minor content-only
+          drop, so this plugin's code did not need any Bukkit-API-level
+          changes to keep working - only this dependency version bump.
+          If your server still runs 26.1.x, "26.1.2-R0.1-SNAPSHOT" also works.
+        -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20.4-R0.1-SNAPSHOT</version>
+            <version>26.2-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -38,16 +52,15 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.13.0</version>
                 <configuration>
-                    <source>8</source>
-                    <target>8</target>
+                    <release>21</release>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.5.3</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

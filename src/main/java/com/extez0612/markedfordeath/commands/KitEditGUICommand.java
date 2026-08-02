@@ -9,22 +9,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 
-import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.UUID;
 
 public class KitEditGUICommand implements CommandExecutor {
-
-    /** Title used to identify our GUI inventory. */
-    public static final String GUI_TITLE = ChatColor.DARK_RED + "" + ChatColor.BOLD + "Kit Editör";
-
-    private static final String RUNNER_URL   = "https://s.namemc.com/i/191e70233757776d.png";
-    private static final String GUARDIAN_URL = "https://s.namemc.com/i/d2e5986e5df342a6.png";
-    private static final String IMPOSTER_URL = "https://s.namemc.com/i/b83566a78f523170.png";
 
     /*
      * ── 27-slot simetrik yerleşim (3 satır × 9 sütun) ───────────────────
@@ -40,7 +28,25 @@ public class KitEditGUICommand implements CommandExecutor {
 
     private final MarkedForDeath plugin;
 
-    public KitEditGUICommand(MarkedForDeath plugin) { this.plugin = plugin; }
+    /** Son açılan GUI'nin (dile göre üretilen) tam başlığı — listener eşleştirmesi için. */
+    private String lastTitle;
+
+    public KitEditGUICommand(MarkedForDeath plugin) {
+        this.plugin    = plugin;
+        this.lastTitle = buildTitle();
+    }
+
+    /**
+     * GUI başlığını aktif dile göre üretir (lang dosyasındaki "gui.title" anahtarı).
+     * Türkçe seçiliyken her zaman Türkçe, İngilizce seçiliyken her zaman İngilizce görünür.
+     */
+    private String buildTitle() {
+        return ChatColor.DARK_RED + "" + ChatColor.BOLD
+                + plugin.getLangManager().getRaw("gui.title");
+    }
+
+    /** Bu GUI'yi tanımlamak için kullanılan güncel başlık (listener bunu kullanır). */
+    public String getGuiTitle() { return lastTitle; }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -60,7 +66,10 @@ public class KitEditGUICommand implements CommandExecutor {
     // ── GUI builder ────────────────────────────────────────────────────────
 
     public void openGUI(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 27, GUI_TITLE);
+        // Dil her değişebileceği (reload) için başlığı her açılışta tazele.
+        lastTitle = buildTitle();
+
+        Inventory inv = Bukkit.createInventory(null, 27, lastTitle);
         KitEditCommand kitEdit = plugin.getKitEditCommand();
 
         // Tüm slotları cam dolgu ile kapat
@@ -72,9 +81,12 @@ public class KitEditGUICommand implements CommandExecutor {
         String imposterName = plugin.getLangManager().getRaw("gui.kit-imposter");
         String leaveName    = ChatColor.RED + plugin.getLangManager().getRaw("gui.leave");
 
-        inv.setItem(SLOT_RUNNER,   buildKitItem(p, kitEdit, "runner",   runnerName,   RUNNER_URL));
-        inv.setItem(SLOT_GUARDIAN, buildKitItem(p, kitEdit, "guardian", guardianName, GUARDIAN_URL));
-        inv.setItem(SLOT_IMPOSTER, buildKitItem(p, kitEdit, "imposter", imposterName, IMPOSTER_URL));
+        // Runner  -> Oyuncu kafası (Steve)
+        // Guardian -> Örümcek ağı
+        // Imposter -> Demir kılıç
+        inv.setItem(SLOT_RUNNER,   buildKitItem(p, kitEdit, "runner",   runnerName,   Material.PLAYER_HEAD));
+        inv.setItem(SLOT_GUARDIAN, buildKitItem(p, kitEdit, "guardian", guardianName, Material.COBWEB));
+        inv.setItem(SLOT_IMPOSTER, buildKitItem(p, kitEdit, "imposter", imposterName, Material.IRON_SWORD));
         inv.setItem(SLOT_LEAVE,    buildLeaveItem(leaveName, kitEdit.isEditing(p)));
 
         p.openInventory(inv);
@@ -83,20 +95,20 @@ public class KitEditGUICommand implements CommandExecutor {
     // ── Item builder'ları ──────────────────────────────────────────────────
 
     /**
-     * Tüm kit slotları her zaman kafa olarak gösterilir.
+     * Tüm kit slotları verilen sabit material ile gösterilir.
      * Düzenlenen kit yeşil + lore ile, diğerleri sarı ile gösterilir.
      * Bariyer dönüşümü yalnızca tıklama anında (KitEditGUIListener) yapılır.
      */
     private ItemStack buildKitItem(Player p, KitEditCommand kitEdit,
-                                   String kit, String displayName, String textureUrl) {
+                                   String kit, String displayName, Material material) {
         if (kitEdit.isEditing(p) && kit.equals(kitEdit.getEditingKit(p))) {
             // Şu an düzenlenen kit: yeşil renk + "editing" lore
-            ItemStack skull = createSkull(ChatColor.GREEN + displayName, textureUrl);
-            addLore(skull, ChatColor.YELLOW + plugin.getLangManager().getRaw("gui.editing-lore"));
-            return skull;
+            ItemStack item = named(new ItemStack(material), ChatColor.GREEN + displayName);
+            addLore(item, ChatColor.YELLOW + plugin.getLangManager().getRaw("gui.editing-lore"));
+            return item;
         }
-        // Diğer kitler: normal sarı kafa — tıklamada bariyer olabilir (listener yapar)
-        return createSkull(ChatColor.YELLOW + displayName, textureUrl);
+        // Diğer kitler: normal sarı ikon — tıklamada bariyer olabilir (listener yapar)
+        return named(new ItemStack(material), ChatColor.YELLOW + displayName);
     }
 
     private ItemStack buildLeaveItem(String displayName, boolean isEditing) {
@@ -105,42 +117,6 @@ public class KitEditGUICommand implements CommandExecutor {
             addLore(item, ChatColor.GRAY + plugin.getLangManager().getRaw("gui.not-editing-lore"));
         }
         return item;
-    }
-
-    // ── Kafa (skull) oluşturucu ────────────────────────────────────────────
-
-    private ItemStack createSkull(String displayName, String textureUrl) {
-        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta  = (SkullMeta) skull.getItemMeta();
-        if (meta == null) return skull;
-
-        String b64 = Base64.getEncoder().encodeToString(
-                ("{\"textures\":{\"SKIN\":{\"url\":\"" + textureUrl + "\"}}}").getBytes(StandardCharsets.UTF_8)
-        );
-
-        try {
-            Class<?> gpClass   = Class.forName("com.mojang.authlib.GameProfile");
-            Class<?> propClass = Class.forName("com.mojang.authlib.properties.Property");
-
-            Object profile    = gpClass.getConstructor(UUID.class, String.class)
-                    .newInstance(UUID.randomUUID(), "mfd_kit");
-            Object properties = gpClass.getMethod("getProperties").invoke(profile);
-            Object property   = propClass.getConstructor(String.class, String.class)
-                    .newInstance("textures", b64);
-
-            properties.getClass().getMethod("put", Object.class, Object.class)
-                    .invoke(properties, "textures", property);
-
-            Field profileField = meta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(meta, profile);
-        } catch (Exception ignored) {
-            // Doku uygulanamadı — düz kafa yine de kullanılabilir
-        }
-
-        meta.setDisplayName(displayName);
-        skull.setItemMeta(meta);
-        return skull;
     }
 
     // ── Yardımcılar ────────────────────────────────────────────────────────

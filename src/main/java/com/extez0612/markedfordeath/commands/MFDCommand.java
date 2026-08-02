@@ -16,18 +16,41 @@ public class MFDCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd,
                              String label, String[] args) {
-        if (!sender.hasPermission("markedfordeath.admin")) {
-            sender.sendMessage(
-                    plugin.getLangManager().get("commands.no-permission"));
-            return true;
-        }
         if (args.length == 0) {
-            sender.sendMessage(
-                    plugin.getLangManager().get("commands.usage-mfd"));
+            if (!sender.hasPermission("markedfordeath.admin")) {
+                sender.sendMessage(plugin.getLangManager().get("commands.no-permission"));
+                return true;
+            }
+            sender.sendMessage(plugin.getLangManager().get("commands.usage-mfd"));
             return true;
         }
 
-        switch (args[0].toLowerCase()) {
+        String sub = args[0].toLowerCase();
+
+        // ── Kit editing subcommands: their own permission (markedfordeath.kitedit) ─
+        if (sub.equals("kitedit")) {
+            if (!sender.hasPermission("markedfordeath.kitedit")) {
+                sender.sendMessage(plugin.getLangManager().get("commands.no-permission"));
+                return true;
+            }
+            return plugin.getKitEditCommand().onCommand(sender, cmd, "kitedit", tail(args));
+        }
+
+        if (sub.equals("kiteditgui")) {
+            if (!sender.hasPermission("markedfordeath.kitedit")) {
+                sender.sendMessage(plugin.getLangManager().get("commands.no-permission"));
+                return true;
+            }
+            return plugin.getKitEditGUICommand().onCommand(sender, cmd, "kiteditgui", tail(args));
+        }
+
+        // ── Everything else is an admin subcommand ──────────────────────────
+        if (!sender.hasPermission("markedfordeath.admin")) {
+            sender.sendMessage(plugin.getLangManager().get("commands.no-permission"));
+            return true;
+        }
+
+        switch (sub) {
 
             case "start":
                 if (!(sender instanceof Player)) {
@@ -63,7 +86,6 @@ public class MFDCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(plugin.getLangManager().get("commands.help-selectrunner"));
                 sender.sendMessage(plugin.getLangManager().get("commands.help-reload"));
                 sender.sendMessage(plugin.getLangManager().get("commands.help-kitedit"));
-                // ── YENİ: kiteditgui ───────────────────────────────────────
                 sender.sendMessage(plugin.getLangManager().get("commands.help-kiteditgui"));
                 break;
 
@@ -94,19 +116,37 @@ public class MFDCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command cmd,
                                       String alias, String[] args) {
         List<String> list = new ArrayList<>();
-        if (!sender.hasPermission("markedfordeath.admin")) return list;
 
         if (args.length == 1) {
-            list.addAll(Arrays.asList(
-                    "start", "stop", "reload", "help", "selectrunner"));
-        } else if (args.length == 2
-                && args[0].equalsIgnoreCase("selectrunner")) {
-            for (Player p : Bukkit.getOnlinePlayers())
-                list.add(p.getName());
+            String q = args[0].toLowerCase();
+            if (sender.hasPermission("markedfordeath.admin")) {
+                list.addAll(Arrays.asList(
+                        "start", "stop", "reload", "help", "selectrunner"));
+            }
+            if (sender.hasPermission("markedfordeath.kitedit")) {
+                list.addAll(Arrays.asList("kitedit", "kiteditgui"));
+            }
+            list.removeIf(s -> !s.startsWith(q));
+            return list;
         }
 
-        String q = args[args.length - 1].toLowerCase();
-        list.removeIf(s -> !s.toLowerCase().startsWith(q));
-        return list;
+        if (args.length >= 2 && args[0].equalsIgnoreCase("kitedit")
+                && sender.hasPermission("markedfordeath.kitedit")) {
+            return plugin.getKitEditCommand().onTabComplete(sender, cmd, alias, tail(args));
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("selectrunner")
+                && sender.hasPermission("markedfordeath.admin")) {
+            for (Player p : Bukkit.getOnlinePlayers()) list.add(p.getName());
+            String q = args[1].toLowerCase();
+            list.removeIf(s -> !s.toLowerCase().startsWith(q));
+            return list;
+        }
+
+        return Collections.emptyList();
+    }
+
+    private String[] tail(String[] args) {
+        return Arrays.copyOfRange(args, 1, args.length);
     }
 }

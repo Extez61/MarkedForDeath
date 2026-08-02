@@ -41,6 +41,19 @@ public class GameManager {
 
     private long lastReminderTime = 0L;
 
+    // ── task-visibility numaralı seçenekler ────────────────────────────────
+    private static final int VISIBILITY_ONLY_RUNNER          = 1;
+    private static final int VISIBILITY_RUNNER_AND_IMPOSTER  = 2;
+    private static final int VISIBILITY_EVERYONE             = 3;
+
+    // ── show-imposter-to-runner-in-chat numaralı seçenekler ────────────────
+    private static final int IMPOSTER_CHAT_DISABLED = 1;
+    private static final int IMPOSTER_CHAT_ENABLED  = 2;
+
+    // ── Oyun başlangıcında runner çevresine dizilim ─────────────────────────
+    /** Diğer oyuncuların runnera olan mesafesi (blok). */
+    private static final double FORMATION_RADIUS = 1.0;
+
     // ── keepInventory yönetimi ─────────────────────────────────────────────
     /** Oyun başlamadan önceki keepInventory değeri (geri yüklemek için). */
     private final Map<String, Boolean> originalKeepInventory = new HashMap<>();
@@ -187,11 +200,15 @@ public class GameManager {
             if (p == null || !p.isOnline()) continue;
             clearPotionEffects(p);
             giveKit(p);
+            p.getInventory().setHeldItemSlot(0);   // <-- 1 idi, 0 oldu (0-indeksli: 0 = görsel 1. slot)
             p.setHealth(p.getMaxHealth());
             p.setFoodLevel(20);
             p.setSaturation(20f);
-            if (!p.equals(finalRunner)) p.teleport(finalRunner.getLocation());
         }
+
+        // Runner dışındaki tüm oyuncuları runner çevresine daire şeklinde,
+        // ona bakacak şekilde diz.
+        teleportAroundRunner(finalRunner.getLocation(), nonRunners);
 
         if (twoPlayerMode) {
             broadcast(plugin.getLangManager().get("game.two-player-no-imposter"));
@@ -201,12 +218,18 @@ public class GameManager {
 
         Player impPlayer = getImposter();
         if (impPlayer != null && impPlayer.isOnline()) {
+            // Hain'e rolü hem title hem de chat ile bildirilir.
+            // Böylece title gösterilirken AFK olan oyuncu, bilgiyi chatten de görebilir.
             VersionUtil.sendTitle(impPlayer,
                     plugin.getLangManager().getRaw("game.imposter-title-reveal"),
                     plugin.getLangManager().getRaw("game.imposter-subtitle-reveal"),
                     10, 80, 20);
+            impPlayer.sendMessage(plugin.getLangManager().get("game.imposter-reveal"));
+
+            int imposterChatOption = plugin.getConfig()
+                    .getInt("game.show-imposter-to-runner-in-chat", IMPOSTER_CHAT_DISABLED);
             Player runnerP = getRunner();
-            if (plugin.getConfig().getBoolean("game.show-imposter-to-runner-in-chat", false)
+            if (imposterChatOption == IMPOSTER_CHAT_ENABLED
                     && runnerP != null && runnerP.isOnline()) {
                 runnerP.sendMessage(plugin.getLangManager().get(
                         "game.summary-imposter", "{player}", impPlayer.getName()));
@@ -215,6 +238,39 @@ public class GameManager {
 
         startActionBar();
         return true;
+    }
+
+    // ── Dizilim yardımcıları ────────────────────────────────────────────────
+
+    /**
+     * Verilen oyuncuları merkez konum (runner) etrafına eşit açılarla,
+     * FORMATION_RADIUS kadar uzağa, merkeze bakacak şekilde ışınlar.
+     * Böylece herkes aynı noktaya/pitche değil, runnerın etrafında bir
+     * daire oluşturarak ve ona dönük şekilde başlar.
+     */
+    private void teleportAroundRunner(Location center, List<Player> players) {
+        int count = players.size();
+        if (count == 0) return;
+
+        for (int i = 0; i < count; i++) {
+            Player p = players.get(i);
+            double angle = (2 * Math.PI * i) / count;
+            double dx = FORMATION_RADIUS * Math.cos(angle);
+            double dz = FORMATION_RADIUS * Math.sin(angle);
+
+            Location dest = center.clone().add(dx, 0, dz);
+            dest.setYaw(computeYawFacing(dest, center));
+            dest.setPitch(0f);
+
+            p.teleport(dest);
+        }
+    }
+
+    /** "from" konumundan "to" konumuna bakan yaw değerini hesaplar. */
+    private float computeYawFacing(Location from, Location to) {
+        double dx = to.getX() - from.getX();
+        double dz = to.getZ() - from.getZ();
+        return (float) Math.toDegrees(Math.atan2(-dx, dz));
     }
 
     // ── Touch trigger ──────────────────────────────────────────────────────
@@ -412,39 +468,45 @@ public class GameManager {
     private void pushActionBar() {
         if (allPlayerUUIDs.isEmpty()) return;
 
-        String visibility = plugin.getConfig().getString("game.task-visibility", "runner_only");
-        String timeStr    = formatTime(timeLeft);
+        int visibility = plugin.getConfig().getInt("game.task-visibility", VISIBILITY_ONLY_RUNNER);
+        String timeStr = formatTime(timeLeft);
 
-        String taskPart = currentTaskDisplay != null
+        // Runner için: "Görev: ..." — Imposter için: "Runner'ın Görevi: ..."
+        String runnerTaskPart = currentTaskDisplay != null
                 ? plugin.getLangManager().getRaw("game.task-actionbar", "{task}", currentTaskDisplay)
                 : "";
+        String imposterTaskPart = currentTaskDisplay != null
+                ? plugin.getLangManager().getRaw("game.task-actionbar-imposter", "{task}", currentTaskDisplay)
+                : "";
 
-        String fullBar;
-        if (!taskPart.isEmpty()) {
-            fullBar = gameRunning
-                    ? taskPart + ChatColor.GRAY + " | " + ChatColor.GREEN + timeStr
-                    : taskPart;
-        } else {
-            fullBar = gameRunning ? ChatColor.GREEN + timeStr : "";
-        }
-
-        String timeBar = plugin.getLangManager().getRaw("game.time-left", "{time}", timeStr);
+        String runnerBar   = buildBar(runnerTaskPart, timeStr);
+        String imposterBar = buildBar(imposterTaskPart, timeStr);
+        String timeBar     = plugin.getLangManager().getRaw("game.time-left", "{time}", timeStr);
 
         for (UUID uuid : allPlayerUUIDs) {
             Player p = Bukkit.getPlayer(uuid);
             if (p == null || !p.isOnline()) continue;
 
             if (uuid.equals(runnerUUID)) {
-                if (!fullBar.isEmpty()) VersionUtil.sendActionBar(p, fullBar);
+                if (!runnerBar.isEmpty()) VersionUtil.sendActionBar(p, runnerBar);
             } else if (uuid.equals(imposterUUID)
-                    && ("runner_and_imposter".equals(visibility) || "everyone".equals(visibility))) {
-                if (!fullBar.isEmpty()) VersionUtil.sendActionBar(p, fullBar);
-            } else if ("everyone".equals(visibility)) {
-                if (!fullBar.isEmpty()) VersionUtil.sendActionBar(p, fullBar);
+                    && (visibility == VISIBILITY_RUNNER_AND_IMPOSTER || visibility == VISIBILITY_EVERYONE)) {
+                if (!imposterBar.isEmpty()) VersionUtil.sendActionBar(p, imposterBar);
+            } else if (visibility == VISIBILITY_EVERYONE) {
+                if (!runnerBar.isEmpty()) VersionUtil.sendActionBar(p, runnerBar);
             } else {
                 if (gameRunning) VersionUtil.sendActionBar(p, timeBar);
             }
         }
+    }
+
+    private String buildBar(String taskPart, String timeStr) {
+        if (!taskPart.isEmpty()) {
+            return gameRunning
+                    ? taskPart + ChatColor.GRAY + " | " + ChatColor.GREEN + timeStr
+                    : taskPart;
+        }
+        return gameRunning ? ChatColor.GREEN + timeStr : "";
     }
 
     private String formatTime(int totalSeconds) {

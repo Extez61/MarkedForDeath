@@ -21,7 +21,10 @@ public class KitEditGUIListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player)) return;
-        if (!KitEditGUICommand.GUI_TITLE.equals(e.getView().getTitle())) return;
+
+        // Başlık artık dile göre değişiyor (gui.title) — güncel başlıkla karşılaştır.
+        String currentGuiTitle = plugin.getKitEditGUICommand().getGuiTitle();
+        if (!currentGuiTitle.equals(e.getView().getTitle())) return;
 
         e.setCancelled(true);
 

@@ -9,6 +9,7 @@ game:
   runner-selected: "&aRunner selected: &e{player}"
   imposter-reveal: "&cYou are the Imposter! Help the Runner complete their task."
   task-actionbar: "&aTask: &b{task}"
+  task-actionbar-imposter: "&aRunner's Task: &b{task}"
   time-left: "&aTime: &e{time}"
   runner-died-title: "&cRunner Died!"
   runner-died-subtitle: "&7Guardians win!"
@@ -34,20 +35,22 @@ game:
   new-player-spectator: "&7Game is in progress, spectate until next round."
   two-player-no-imposter: "&6[2-Player Mode] &eNo Imposter this round — Runner vs Guardian!"
   no-imposter: "&7None"
+  block-restricted: "&cYou can't place blocks until the Runner touches a player!"
+  action-restricted: "&cYou can't do that until the Runner touches a player!"
 
 commands:
   no-permission: "&cYou don't have permission to use this command."
   player-only: "&cOnly players can use this command."
   player-not-found: "&cPlayer not found: &e{player}"
   reload: "&aPlugin config reloaded successfully!"
-  usage-mfd: "&eUsage: /mfd <start|stop|reload|help|selectrunner <player>>"
+  usage-mfd: "&eUsage: /mfd <start|stop|reload|help|selectrunner|kitedit|kiteditgui>"
   help-header: "&8&m----&r &6MFD Help &8&m----"
   help-start: "&e/mfd start &7- Starts the game"
   help-stop: "&e/mfd stop &7- Stops the game"
   help-reload: "&e/mfd reload &7- Reloads the plugin configuration"
   help-selectrunner: "&e/mfd selectrunner <player> &7- Selects the runner"
-  help-kitedit: "&e/kitedit <runner|guardians|imposter|leave> &7- Edits a kit (text)"
-  help-kiteditgui: "&e/kiteditgui &7- Opens the kit editor GUI"
+  help-kitedit: "&e/mfd kitedit <runner|guardians|imposter|leave> &7- Edits a kit (text) (alias: /kitedit)"
+  help-kiteditgui: "&e/mfd kiteditgui &7- Opens the kit editor GUI (alias: /kiteditgui)"
   kitedit-enter: "&aEntered kit edit mode: &e{kit} &a- Type &e/kitedit leave &awhen done."
   kitedit-leave: "&aKit saved and exited edit mode."
   kitedit-usage: "&eUsage: /kitedit <runner|guardians|imposter|leave>"
@@ -57,6 +60,7 @@ commands:
   kitedit-busy: "&c{player} is already editing a kit. Wait for them to finish."
 
 gui:
+  title: "Kit Editor"
   kit-runner: "Runner"
   kit-guardian: "Guardian"
   kit-imposter: "Imposter"
@@ -66,3 +70,6 @@ gui:
   not-editing-lore: "Not currently editing a kit"
 
 compass-hint: "&7It looks like you don't have a compass plugin. For the best experience, consider using &bhttps://modrinth.com/plugin/explayercompass"
+
+update-available: "&aNew version available! &7Current: &c{current} &7New: &a{latest}"
+update-download: "&8[&bClick here to download&8]"

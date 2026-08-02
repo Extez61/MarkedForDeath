@@ -4,6 +4,7 @@ import com.extez0612.markedfordeath.MarkedForDeath;
 import com.extez0612.markedfordeath.utils.VersionUtil;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -25,8 +26,9 @@ public class KitManager {
     /** kitType: "runner" | "guardian" | "imposter" */
     public Map<Integer, ItemStack> getKit(String kitType) {
         Map<Integer, ItemStack> result = new HashMap<>();
-        ConfigurationSection section =
-                plugin.getConfig().getConfigurationSection("kits." + kitType + ".items");
+        FileConfiguration kits = plugin.getKitsConfig();
+        // Path in kits.yml: <kitType>.items  (no 'kits.' prefix)
+        ConfigurationSection section = kits.getConfigurationSection(kitType + ".items");
         if (section == null) return result;
 
         for (String slotStr : section.getKeys(false)) {
@@ -50,10 +52,9 @@ public class KitManager {
                     try {
                         PotionType pt = PotionType.valueOf(
                                 is.getString("potion-type", "WATER").toUpperCase());
-                        ((PotionMeta) meta).setBasePotionData(
-                                new PotionData(pt,
-                                        is.getBoolean("extended", false),
-                                        is.getBoolean("upgraded", false)));
+                        applyPotionType((PotionMeta) meta, pt,
+                                is.getBoolean("extended", false),
+                                is.getBoolean("upgraded", false));
                     } catch (Exception ignored) {}
                 }
                 item.setItemMeta(meta);
@@ -64,29 +65,63 @@ public class KitManager {
     }
 
     public void saveKit(String kitType, PlayerInventory inv) {
-        String path = "kits." + kitType + ".items";
-        plugin.getConfig().set(path, null);
+        FileConfiguration kits = plugin.getKitsConfig();
+        // Path in kits.yml: <kitType>.items  (no 'kits.' prefix)
+        String path = kitType + ".items";
+        kits.set(path, null);
 
         for (int i = 0; i < 36; i++) {
             ItemStack item = inv.getItem(i);
             if (item == null || item.getType() == Material.AIR) continue;
 
-            plugin.getConfig().set(path + "." + i + ".material", item.getType().name());
-            plugin.getConfig().set(path + "." + i + ".amount",   item.getAmount());
+            kits.set(path + "." + i + ".material", item.getType().name());
+            kits.set(path + "." + i + ".amount",   item.getAmount());
 
             ItemMeta meta = item.getItemMeta();
             if (meta == null) continue;
 
             if (VersionUtil.isUnbreakable(meta))
-                plugin.getConfig().set(path + "." + i + ".unbreakable", true);
+                kits.set(path + "." + i + ".unbreakable", true);
 
             if (meta instanceof PotionMeta) {
-                PotionData pd = ((PotionMeta) meta).getBasePotionData();
-                plugin.getConfig().set(path + "." + i + ".potion-type", pd.getType().name());
-                plugin.getConfig().set(path + "." + i + ".extended",    pd.isExtended());
-                plugin.getConfig().set(path + "." + i + ".upgraded",    pd.isUpgraded());
+                readPotionType(kits, path + "." + i, (PotionMeta) meta);
             }
         }
-        plugin.saveConfig();
+        plugin.saveKitsConfig();
+    }
+
+    // ── Potion helper'ları ─────────────────────────────────────────────────
+    // PotionData (setBasePotionData/getBasePotionData) 1.20.5+ itibarıyla
+    // deprecated ve kaldırılmaya işaretli. Yeni sunucularda setBasePotionType
+    // kullanılmalı; VersionUtil.isNewPotionApi() ile eski/yeni API arasında
+    // reflection sonucuna göre seçim yapılıyor, böylece derleme sırasında
+    // deprecated API'ye doğrudan referans verilmiyor (warning oluşmuyor)
+    // ve eski sürümlerle geriye dönük uyumluluk korunuyor.
+
+    @SuppressWarnings({"deprecation", "removal"})
+    private void applyPotionType(PotionMeta meta, PotionType pt,
+                                 boolean extended, boolean upgraded) {
+        if (VersionUtil.isNewPotionApi()) {
+            meta.setBasePotionType(pt);
+        } else {
+            meta.setBasePotionData(new PotionData(pt, extended, upgraded));
+        }
+    }
+
+    @SuppressWarnings({"deprecation", "removal"})
+    private void readPotionType(FileConfiguration kits, String path, PotionMeta meta) {
+        if (VersionUtil.isNewPotionApi()) {
+            PotionType pt = meta.getBasePotionType();
+            if (pt != null) {
+                kits.set(path + ".potion-type", pt.name());
+                kits.set(path + ".extended",    false);
+                kits.set(path + ".upgraded",    false);
+            }
+        } else {
+            PotionData pd = meta.getBasePotionData();
+            kits.set(path + ".potion-type", pd.getType().name());
+            kits.set(path + ".extended",    pd.isExtended());
+            kits.set(path + ".upgraded",    pd.isUpgraded());
+        }
     }
 }

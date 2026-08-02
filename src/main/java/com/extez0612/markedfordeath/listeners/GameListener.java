@@ -7,11 +7,15 @@ import com.extez0612.markedfordeath.utils.VersionUtil;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class GameListener implements Listener {
@@ -20,6 +24,10 @@ public class GameListener implements Listener {
     private final GameManager    gm;
     @SuppressWarnings("unused")
     private final KitEditCommand kitEdit;
+
+    /** Kısıtlama mesajlarının chat'i spamlamasını önlemek için oyuncu başına küçük bir cooldown. */
+    private final Map<UUID, Long> lastRestrictionWarning = new HashMap<>();
+    private static final long RESTRICTION_WARNING_COOLDOWN_MS = 2000L;
 
     public GameListener(MarkedForDeath plugin, KitEditCommand kitEdit) {
         this.plugin  = plugin;
@@ -117,6 +125,66 @@ public class GameListener implements Listener {
             e.setCancelled(true);
             p.sendMessage(plugin.getLangManager().get("game.no-drop"));
         }
+    }
+
+    // ── Dokunma öncesi eylem engeli ─────────────────────────────────────────
+    // Runner birine vurup oyunu başlatana kadar (waitingForTouch && !startedByTouch)
+    // hiçbir oyuncu: blok koyamaz, elindeki hiçbir eşyayla etkileşime giremez
+    // (olta atma, ender pearl/iksir fırlatma, kova kullanma, yemek yeme, vb.)
+    // ve hiçbir mermi/varlık fırlatamaz. game.restrict-actions-before-touch ile
+    // kapatılabilir (varsayılan: true, yani engelli).
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onBlockPlace(BlockPlaceEvent e) {
+        if (!isPreTouchRestrictionActive()) return;
+
+        Player p = e.getPlayer();
+        if (!gm.isPlayerInGame(p.getUniqueId())) return;
+
+        e.setCancelled(true);
+        warn(p, "game.block-restricted");
+    }
+
+    /** Sağ tıkla yapılan her türlü eşya etkileşimi: olta atma, pearl/iksir fırlatma, kova, yemek, vb. */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onPlayerInteract(PlayerInteractEvent e) {
+        if (!isPreTouchRestrictionActive()) return;
+
+        Action action = e.getAction();
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
+
+        Player p = e.getPlayer();
+        if (!gm.isPlayerInGame(p.getUniqueId())) return;
+
+        e.setCancelled(true);
+        warn(p, "game.action-restricted");
+    }
+
+    /** Güvenlik ağı: pearl, iksir, olta kancası gibi her fırlatılan varlığı da engeller. */
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onProjectileLaunch(ProjectileLaunchEvent e) {
+        if (!isPreTouchRestrictionActive()) return;
+        if (!(e.getEntity().getShooter() instanceof Player)) return;
+
+        Player p = (Player) e.getEntity().getShooter();
+        if (!gm.isPlayerInGame(p.getUniqueId())) return;
+
+        e.setCancelled(true);
+        warn(p, "game.action-restricted");
+    }
+
+    private boolean isPreTouchRestrictionActive() {
+        if (!gm.isWaitingForTouch() || gm.isGameStartedByTouch()) return false;
+        return plugin.getConfig().getBoolean("game.restrict-actions-before-touch", true);
+    }
+
+    /** Kısıtlama mesajını en fazla RESTRICTION_WARNING_COOLDOWN_MS'de bir gönderir (spam önleme). */
+    private void warn(Player p, String langKey) {
+        long now = System.currentTimeMillis();
+        Long last = lastRestrictionWarning.get(p.getUniqueId());
+        if (last != null && now - last < RESTRICTION_WARNING_COOLDOWN_MS) return;
+        lastRestrictionWarning.put(p.getUniqueId(), now);
+        p.sendMessage(plugin.getLangManager().get(langKey));
     }
 
     // ── Guardian öldürme tespiti ───────────────────────────────────────────
